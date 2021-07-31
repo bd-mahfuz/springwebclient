@@ -10,7 +10,9 @@ import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.core.publisher.Mono;
+import reactor.retry.Retry;
 
+import java.time.Duration;
 import java.util.List;
 
 @Slf4j
@@ -19,6 +21,15 @@ public class PostRestClient {
 
     public PostRestClient(WebClient webClient) {
         this.webClient = webClient;
+    }
+
+    public Retry<?> getRetry() {
+        return Retry.anyOf(ClientDataException.class)
+                .fixedBackoff(Duration.ofSeconds(2))
+                .retryMax(3)
+                .doOnRetry(objectRetryContext -> {
+                    log.error("exception is:"+ objectRetryContext);
+                });
     }
 
     public List<Post> getAllPosts() {
@@ -59,6 +70,7 @@ public class PostRestClient {
                 .onStatus(HttpStatus::is4xxClientError, clientResponse -> handle4xxError(clientResponse))
                 .onStatus(HttpStatus::is5xxServerError, clientResponse -> handle5xxError(clientResponse))
                 .bodyToMono(Post.class)
+                //.retryWhen(getRetry())
                 .block();
     }
 
