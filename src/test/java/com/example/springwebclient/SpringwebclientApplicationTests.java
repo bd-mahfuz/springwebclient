@@ -16,13 +16,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @SpringBootTest
 @Slf4j
 class SpringwebclientApplicationTests {
-    private static final String BASE_URL = "https://jsonplaceholder.typicode.com/";
+    private static final String BASE_URL = "http://localhost:8080/api/";
     private WebClient webClient = WebClient.create(BASE_URL);
 
     @Test
     void getAllPosts() {
         PostRestClient postRestClient = new PostRestClient(webClient);
-
         List<Post> allPosts = postRestClient.getAllPosts();
         System.out.println(allPosts);
         System.out.println("size:"+allPosts.size());
@@ -32,13 +31,13 @@ class SpringwebclientApplicationTests {
     @Test
     void getPostById()  {
         PostRestClient postRestClient = new PostRestClient(webClient);
-        /*try {
-            Post pos = postRestClient.getPostById(10000000);
+        try {
+            Post pos = postRestClient.getPostByIdWithCustomExceptionHandling(99);
             System.out.println(pos.getTitle());
         } catch (Exception e) {
             e.printStackTrace();
-        }*/
-        Assertions.assertThrows(WebClientResponseException.class, () -> postRestClient.getPostById(1000000));
+        }
+        //Assertions.assertThrows(WebClientResponseException.class, () -> postRestClient.getPostById(1000000));
     }
 
     @Test

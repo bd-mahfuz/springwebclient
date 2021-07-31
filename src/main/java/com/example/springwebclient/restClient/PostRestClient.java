@@ -1,10 +1,15 @@
 package com.example.springwebclient.restClient;
 
 import com.example.springwebclient.UriConstant;
+import com.example.springwebclient.exception.ClientDataException;
+import com.example.springwebclient.model.ErrorResponseModel;
 import com.example.springwebclient.model.Post;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
+import reactor.core.publisher.Mono;
 
 import java.util.List;
 
@@ -42,6 +47,36 @@ public class PostRestClient {
             log.info("Exception when getting post by its id:"+ e);
             throw e;
         }
+    }
+
+    public Post getPostByIdWithCustomExceptionHandling(int postId) {
+        /*String uri = UriComponentsBuilder.fromUriString(UriConstant.POST_BY_ID_URI)
+                .se("postId", postId)
+                .toUriString();*/
+        return webClient.get()
+                .uri(UriConstant.POST_BY_ID_URI, postId)
+                .retrieve()
+                .onStatus(HttpStatus::is4xxClientError, clientResponse -> handle4xxError(clientResponse))
+                .onStatus(HttpStatus::is5xxServerError, clientResponse -> handle5xxError(clientResponse))
+                .bodyToMono(Post.class)
+                .block();
+    }
+
+    private Mono<? extends Throwable> handle5xxError(ClientResponse clientResponse) {
+        Mono<ErrorResponseModel> errorResponseModelMono = clientResponse.bodyToMono(ErrorResponseModel.class);
+        return errorResponseModelMono.flatMap(errorResponseModel -> {
+            log.error("error response code is: {} and message: {}", errorResponseModel.getStatus(), errorResponseModel.getMessage());
+            return Mono.error(new ClientDataException("Error:"+ errorResponseModel.getMessage()));
+        });
+
+    }
+
+    private Mono<? extends Throwable> handle4xxError(ClientResponse clientResponse) {
+        Mono<ErrorResponseModel> errorResponseModelMono = clientResponse.bodyToMono(ErrorResponseModel.class);
+        return errorResponseModelMono.flatMap(errorResponseModel -> {
+            log.error("error response code is: {} and message: {}", errorResponseModel.getStatus(), errorResponseModel.getMessage());
+            return Mono.error(new ClientDataException("Error:"+ errorResponseModel.getMessage()));
+        });
     }
 
     public Post addPost(Post post) {
